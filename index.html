@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Pagos - Restaurante</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --gray: #95a5a6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            color: #f39c12;
+        }
+        
+        .header-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .admin-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        
+        .admin-address {
+            font-family: monospace;
+            word-break: break-all;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .app-content {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+        
+        .currency-selector {
+            background: var(--light);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .currency-selector select {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 0 10px;
+            background: white;
+        }
+        
+        .main-panel {
+            display: flex;
+            flex-direction: row;
+            min-height: 450px;
+        }
+        
+        .input-section {
+            flex: 1;
+            padding: 25px;
+            border-right: 1px solid #eee;
+        }
+        
+        .invoice-section {
+            flex: 1;
+            padding: 25px;
+            background: #f9f9f9;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--dark);
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input:focus {
+            border-color: var(--secondary);
+            outline: none;
+        }
+        
+        .amount-display {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px dashed #ccc;
+        }
+        
+        .amount-fiat {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .amount-sats {
+            font-size: 16px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 16px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+        }
+        
+        .invoice-amount {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .invoice-details {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+        
+        .invoice-id {
+            font-size: 14px;
+            color: #6b7280;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+        
+        .qrcode {
+            margin: 20px auto;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.paid {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.expired {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .history {
+            padding: 25px;
+            border-top: 1px solid #eee;
+        }
+        
+        .history-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--dark);
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-description {
+            font-weight: 600;
+            flex: 2;
+        }
+        
+        .history-amount {
+            flex: 1;
+            text-align: right;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .history-status {
+            flex: 1;
+            text-align: right;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .paid-status {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .pending-status {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        @media (max-width: 768px) {
+            .main-panel {
+                flex-direction: column;
+            }
+            
+            .input-section, .invoice-section {
+                border-right: none;
+                border-bottom: 1px solid #eee;
+            }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--success);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            background: var(--danger);
+        }
+        
+        .powered-by {
+            text-align: center;
+            padding: 15px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .powered-by a {
+            color: #f39c12;
+            text-decoration: none;
+        }
+        
+        .setup-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .setup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .setup-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+        
+        .setup-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .setup-buttons button {
+            width: 48%;
+        }
+        
+        .btn-cancel {
+            background: var(--gray);
+        }
+        
+        .btn-cancel:hover {
+            background: #7f8c8d;
+        }
+        
+        .admin-section {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+        
+        .admin-section h3 {
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+        
+        .admin-section p {
+            font-family: monospace;
+            word-break: break-all;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+                <span>LaChispa POST</span>
+            </div>
+            <div class="header-subtitle">Sistema de cobro para dependientes</div>
+            <div class="admin-info">
+                LNAddress configurada: 
+                <div class="admin-address" id="configuredAddress">No configurada</div>
+            </div>
+        </header>
+        
+        <div class="app-content">
+            <div class="currency-selector">
+                <span>Moneda:</span>
+                <select id="currencySelector">
+                    <option value="CUP">CUP (Peso Cubano)</option>
+                    <option value="USD">USD (Dólar Americano)</option>
+                </select>
+            </div>
+            
+            <div class="main-panel">
+                <div class="input-section">
+                    <h2 class="section-title">Registrar Pago</h2>
+                    
+                    <div class="form-group">
+                        <label for="amount">Monto a cobrar:</label>
+                        <input type="number" id="amount" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Servicio o Producto:</label>
+                        <input type="text" id="description" placeholder="Ej: Mesa 5, Almuerzo">
+                    </div>
+                    
+                    <div class="amount-display">
+                        <div class="amount-fiat" id="amountFiat">0.00 USD</div>
+                        <div class="amount-sats" id="amountSats">0 satoshis</div>
+                    </div>
+                    
+                    <button id="generateBtn">
+                        <i class="fas fa-bolt"></i> Generar Factura
+                    </button>
+                    
+                    <div class="admin-section">
+                        <h3>LNAddress del Dueño</h3>
+                        <p id="displayAddress">No configurada</p>
+                        <button id="changeAddressBtn" style="display: none;">
+                            <i class="fas fa-cog"></i> Cambiar LNAddress
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="invoice-section" id="invoiceSection">
+                    <h2 class="section-title">Factura Lightning</h2>
+                    
+                    <div class="invoice-details">
+                        <div class="invoice-amount" id="invoiceAmount">0.00 USD</div>
+                        <div id="invoiceDescription">Servicio o producto</div>
+                    </div>
+                    
+                    <div class="qrcode" id="qrcode"></div>
+                    
+                    <div class="status pending" id="paymentStatus">
+                        <i class="fas fa-hourglass-half"></i> Esperando pago...
+                    </div>
+                    
+                    <div class="invoice-id" id="invoiceId"></div>
+                    
+                    <button id="newInvoiceBtn">
+                        <i class="fas fa-plus"></i> Crear Nueva Factura
+                    </button>
+                </div>
+            </div>
+            
+            <div class="history">
+                <h2 class="history-title">Historial de Pagos</h2>
+                <div id="paymentHistory">
+                    <div class="history-item">
+                        <div class="history-description">Almuerzo - Mesa 2</div>
+                        <div class="history-amount">5.00 USD</div>
+                        <div class="history-status paid-status">Pagado</div>
+                    </div>
+                    <div class="history-item">
+                        <div class="history-description">Bebida - Mesa 4</div>
+                        <div class="history-amount">2.00 USD</div>
+                        <div class="history-status paid-status">Pagado</div>
+                    </div>
+                    <div class="history-item">
+                        <div class="history-description">Cena - Mesa 1</div>
+                        <div class="history-amount">3.50 USD</div>
+                        <div class="history-status pending-status">Pendiente</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="powered-by">
+            Powered by <a href="https://yadio.io/" target="_blank">Yadio</a> and <a href="https://lnbits.com/" target="_blank">LNBits</a>
+        </div>
+    </div>
+
+    <!-- Modal para configurar LNAddress -->
+    <div class="setup-modal" id="setupModal">
+        <div class="setup-content">
+            <h2 class="setup-title">Configurar LNAddress del Dueño</h2>
+            <div class="form-group">
+                <label for="lnAddress">Lightning Address del Dueño:</label>
+                <input type="text" id="lnAddress" placeholder="usuario@dominio.com">
+            </div>
+            <div class="form-group">
+                <label for="adminPin">PIN de Administrador:</label>
+                <input type="password" id="adminPin" placeholder="1234">
+            </div>
+            <div class="setup-buttons">
+                <button class="btn-cancel" id="cancelSetup">Cancelar</button>
+                <button id="saveSetup">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librería para generar QR codes -->
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    
+    <script>
+        // Configuración
+        const ADMIN_PIN = "4321"; // PIN fijo para administración (en producción esto debería estar en el backend)
+        const LNBitsAPI = "https://legend.lnbits.com/api/v1"; // URL de la API de LNBits
+        
+        // Elementos del DOM
+        const currencySelector = document.getElementById('currencySelector');
+        const amountInput = document.getElementById('amount');
+        const descriptionInput = document.getElementById('description');
+        const generateBtn = document.getElementById('generateBtn');
+        const invoiceSection = document.getElementById('invoiceSection');
+        const inputSection = document.querySelector('.input-section');
+        const amountFiat = document.getElementById('amountFiat');
+        const amountSats = document.getElementById('amountSats');
+        const invoiceAmount = document.getElementById('invoiceAmount');
+        const invoiceDescription = document.getElementById('invoiceDescription');
+        const qrcode = document.getElementById('qrcode');
+        const paymentStatus = document.getElementById('paymentStatus');
+        const newInvoiceBtn = document.getElementById('newInvoiceBtn');
+        const invoiceId = document.getElementById('invoiceId');
+        const paymentHistory = document.getElementById('paymentHistory');
+        const configuredAddress = document.getElementById('configuredAddress');
+        const displayAddress = document.getElementById('displayAddress');
+        const changeAddressBtn = document.getElementById('changeAddressBtn');
+        const setupModal = document.getElementById('setupModal');
+        const lnAddressInput = document.getElementById('lnAddress');
+        const adminPinInput = document.getElementById('adminPin');
+        const cancelSetupBtn = document.getElementById('cancelSetup');
+        const saveSetupBtn = document.getElementById('saveSetup');
+        
+        // Variables de estado
+        let currentInvoice = null;
+        let checkInterval = null;
+        let currentCurrency = 'USD';
+        let currentRate = 0;
+        let ownerLNAddress = '';
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar configuración guardada
+            loadConfiguration();
+            
+            // Cargar tasa de cambio inicial
+            updateExchangeRate();
+            
+            // Configurar event listeners
+            currencySelector.addEventListener('change', function() {
+                currentCurrency = this.value;
+                updateAmountDisplay();
+                updateExchangeRate();
+            });
+            
+            amountInput.addEventListener('input', updateAmountDisplay);
+            
+            generateBtn.addEventListener('click', generateInvoice);
+            
+            newInvoiceBtn.addEventListener('click', resetUI);
+            
+            changeAddressBtn.addEventListener('click', showSetupModal);
+            
+            cancelSetupBtn.addEventListener('click', hideSetupModal);
+            
+            saveSetupBtn.addEventListener('click', saveConfiguration);
+            
+            // Cargar historial desde localStorage
+            loadHistory();
+        });
+        
+        // Cargar configuración desde localStorage
+        function loadConfiguration() {
+            const savedAddress = localStorage.getItem('ownerLNAddress');
+            if (savedAddress) {
+                ownerLNAddress = savedAddress;
+                configuredAddress.textContent = savedAddress;
+                displayAddress.textContent = savedAddress;
+                changeAddressBtn.style.display = 'block';
+            } else {
+                // Si no hay dirección configurada, mostrar modal de configuración
+                showSetupModal();
+            }
+        }
+        
+        // Mostrar modal de configuración
+        function showSetupModal() {
+            setupModal.style.display = 'flex';
+        }
+        
+        // Ocultar modal de configuración
+        function hideSetupModal() {
+            setupModal.style.display = 'none';
+            lnAddressInput.value = '';
+            adminPinInput.value = '';
+        }
+        
+        // Guardar configuración
+        function saveConfiguration() {
+            const address = lnAddressInput.value.trim();
+            const pin = adminPinInput.value;
+            
+            if (!isValidLNAddress(address)) {
+                showNotification('Por favor ingrese una Lightning Address válida', 'error');
+                return;
+            }
+            
+            if (pin !== ADMIN_PIN) {
+                showNotification('PIN de administrador incorrecto', 'error');
+                return;
+            }
+            
+            // Guardar la dirección
+            localStorage.setItem('ownerLNAddress', address);
+            ownerLNAddress = address;
+            configuredAddress.textContent = address;
+            displayAddress.textContent = address;
+            changeAddressBtn.style.display = 'block';
+            
+            hideSetupModal();
+            showNotification('LNAddress configurada correctamente');
+        }
+        
+        // Validar formato de Lightning Address
+        function isValidLNAddress(address) {
+            return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(address);
+        }
+        
+        // Actualizar la tasa de cambio desde yadio.io
+        async function updateExchangeRate() {
+            try {
+                const response = await fetch(`https://api.yadio.io/json/${currentCurrency}`);
+                const data = await response.json();
+                currentRate = data[currentCurrency].price;
+                updateAmountDisplay();
+            } catch (error) {
+                console.error('Error obteniendo tasa de cambio:', error);
+                showNotification('Error obteniendo tasa de cambio', 'error');
+            }
+        }
+        
+        // Actualizar la visualización del monto
+        function updateAmountDisplay() {
+            let amount = 0;
+            
+            if (amountInput.value) {
+                amount = parseFloat(amountInput.value);
+            }
+            
+            if (isNaN(amount)) amount = 0;
+            
+            // Mostrar monto en moneda fiat
+            amountFiat.textContent = `${amount.toFixed(2)} ${currentCurrency}`;
+            
+            // Calcular y mostrar monto en satoshis
+            if (currentRate > 0) {
+                const sats = Math.round(amount / currentRate * 100000000);
+                amountSats.textContent = `${sats.toLocaleString()} satoshis`;
+            } else {
+                amountSats.textContent = 'Calculando...';
+            }
+        }
+        
+        // Generar factura Lightning
+        async function generateInvoice() {
+            if (!ownerLNAddress) {
+                showNotification('Primero debe configurar la LNAddress del dueño', 'error');
+                showSetupModal();
+                return;
+            }
+            
+            let amount = 0;
+            
+            if (amountInput.value) {
+                amount = parseFloat(amountInput.value);
+            }
+            
+            if (amount <= 0) {
+                showNotification('Por favor ingrese un monto válido', 'error');
+                return;
+            }
+            
+            const description = descriptionInput.value || "Servicio o producto";
+            
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            
+            try {
+                // Calcular monto en satoshis
+                const satsAmount = Math.round(amount / currentRate * 100000000);
+                
+                // En producción, esto debería hacerse a través de un backend seguro
+                const invoice = await createInvoice(satsAmount, description);
+                
+                currentInvoice = invoice;
+                displayInvoice(invoice, amount, description, satsAmount);
+                startCheckingPayment(invoice);
+                
+                // Añadir al historial
+                addToHistory(amount, description, 'pending', currentCurrency);
+                
+            } catch (error) {
+                console.error('Error generando factura:', error);
+                showNotification('Error al generar la factura', 'error');
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fas fa-bolt"></i> Generar Factura';
+            }
+        }
+        
+        // Crear factura (simulación - en producción usar LNBits API o LNAddress)
+        async function createInvoice(amountSats, description) {
+            // Simulamos un delay de red
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // En producción, aquí se haría una petición a la LNAddress del dueño
+            // o a la API de LNBits según corresponda
+            
+            // Simulamos una respuesta
+            return {
+                payment_hash: "abc123def456ghi789" + Math.random().toString(36).substr(2, 9),
+                payment_request: "lnbc" + amountSats + "0p1p0tttpp5...",
+                expires_at: Math.floor(Date.now() / 1000) + 600 // Expira en 10 min
+            };
+        }
+        
+        // Mostrar la factura en la UI
+        function displayInvoice(invoice, amount, description, satsAmount) {
+            inputSection.style.display = 'none';
+            invoiceSection.style.display = 'flex';
+            
+            invoiceAmount.textContent = `${amount.toFixed(2)} ${currentCurrency}`;
+            invoiceDescription.textContent = description;
+            
+            invoiceId.textContent = `ID: ${invoice.payment_hash}`;
+            
+            // Generar QR code
+            qrcode.innerHTML = "";
+            new QRCode(qrcode, {
+                text: invoice.payment_request,
+                width: 200,
+                height: 200
+            });
+            
+            // Reiniciar estado de pago
+            paymentStatus.className = "status pending";
+            paymentStatus.innerHTML = '<i class="fas fa-hourglass-half"></i> Esperando pago...';
+            
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<i class="fas fa-bolt"></i> Generar Factura';
+        }
+        
+        // Comenzar a verificar el pago periódicamente
+        function startCheckingPayment(invoice) {
+            if (checkInterval) clearInterval(checkInterval);
+            
+            checkInterval = setInterval(async () => {
+                try {
+                    // En producción, verificaría con LNBits API o el servicio de LNAddress
+                    const isPaid = await checkInvoiceStatus(invoice.payment_hash);
+                    
+                    if (isPaid) {
+                        clearInterval(checkInterval);
+                        paymentStatus.className = "status paid";
+                        paymentStatus.innerHTML = '<i class="fas fa-check-circle"></i> ¡Pago recibido!';
+                        
+                        // Actualizar historial
+                        updateHistoryStatus(invoice.payment_hash, 'paid');
+                        
+                        showNotification('Pago recibido correctamente');
+                    }
+                } catch (error) {
+                    console.error('Error verificando pago:', error);
+                }
+            }, 5000); // Verificar cada 5 segundos
+        }
+        
+        // Verificar estado de pago (simulación)
+        async function checkInvoiceStatus(paymentHash) {
+            // Simulamos una verificación de pago
+            // En producción, esto verificaría con el servicio adecuado
+            
+            // Simulamos un 20% de probabilidad de pago después de 15 segundos
+            if (Math.random() < 0.2 && Date.now() % 7 === 0) {
+                return true;
+            }
+            return false;
+        }
+        
+        // Añadir pago al historial
+        function addToHistory(amount, description, status, currency) {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.dataset.hash = currentInvoice.payment_hash;
+            
+            const statusClass = status === 'paid' ? 'paid-status' : 'pending-status';
+            const statusText = status === 'paid' ? 'Pagado' : 'Pendiente';
+            
+            historyItem.innerHTML = `
+                <div class="history-description">${description}</div>
+                <div class="history-amount">${amount.toFixed(2)} ${currency}</div>
+                <div class="history-status ${statusClass}">${statusText}</div>
+            `;
+            
+            paymentHistory.prepend(historyItem);
+            
+            // Guardar en localStorage
+            saveHistory();
+        }
+        
+        // Actualizar estado en el historial
+        function updateHistoryStatus(paymentHash, status) {
+            const items = paymentHistory.querySelectorAll('.history-item');
+            items.forEach(item => {
+                if (item.dataset.hash === paymentHash) {
+                    const statusDiv = item.querySelector('.history-status');
+                    if (status === 'paid') {
+                        statusDiv.className = 'history-status paid-status';
+                        statusDiv.textContent = 'Pagado';
+                    }
+                }
+            });
+            
+            // Actualizar localStorage
+            saveHistory();
+        }
+        
+        // Guardar historial en localStorage
+        function saveHistory() {
+            // En una aplicación real, esto se guardaría en una base de datos
+            console.log('Guardando historial...');
+        }
+        
+        // Cargar historial desde localStorage
+        function loadHistory() {
+            // En una aplicación real, esto se cargaría desde una base de datos
+            console.log('Cargando historial...');
+        }
+        
+        // Reiniciar la UI para una nueva factura
+        function resetUI() {
+            clearInterval(checkInterval);
+            checkInterval = null;
+            
+            inputSection.style.display = 'block';
+            invoiceSection.style.display = 'none';
+            
+            amountInput.value = "";
+            descriptionInput.value = "";
+            
+            updateAmountDisplay();
+            
+            currentInvoice = null;
+        }
+        
+        // Mostrar notificación
+        function showNotification(message, type = '') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
