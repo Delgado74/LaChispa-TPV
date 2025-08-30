@@ -2,150 +2,109 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LaChispa TPV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .app { max-width: 500px; margin: auto; padding: 20px; background: #fff; min-height: 100vh; }
-    h1 { text-align: center; color: #333; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
     label { display: block; margin-top: 10px; }
-    input, select, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc; }
-    button { background: #333; color: white; border: none; cursor: pointer; }
-    button:hover { background: #555; }
-    .invoice, .history { margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; background: #fafafa; }
-    .hidden { display: none; }
-    .qr { text-align: center; margin: 15px 0; }
-    canvas { max-width: 100%; }
+    input, select, button, textarea { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #aaa; }
+    button { background: #ff6600; color: white; font-weight: bold; cursor: pointer; }
+    #invoiceBox { margin-top: 20px; padding: 15px; border: 2px dashed #ff6600; border-radius: 10px; }
+    pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <h1>LaChispa TPV</h1>
 
-    <!-- Configuración del dueño -->
-    <div id="ownerConfig">
-      <h3>Configuración del Dueño</h3>
-      <label>LN Address (LNbits):</label>
-      <input type="text" id="lnAddress" placeholder="ej: usuario@lnbits.cubabitcoin.org">
-      <label>Definir PIN de administración:</label>
-      <input type="password" id="setPin" placeholder="PIN nuevo">
-      <button onclick="saveOwnerConfig()">Guardar</button>
-    </div>
+  <h2>💡 LaChispa TPV</h2>
+  <div class="card">
+    <label>Producto o Servicio</label>
+    <input type="text" id="descripcion" placeholder="Ej: Café, recarga, transporte">
 
-    <!-- Área de cobro para dependiente -->
-    <div id="posArea" class="hidden">
-      <h3>Generar Factura</h3>
-      <label>Producto o Servicio</label>
-      <input type="text" id="description" placeholder="Descripción">
-      <label>Monto</label>
-      <input type="number" id="amount" placeholder="0.00">
-      <label>Moneda</label>
-      <select id="currency">
-        <option value="CUP">CUP</option>
-        <option value="USD">USD</option>
-      </select>
-      <p id="rateInfo"></p>
-      <button onclick="createInvoice()">Crear Factura Lightning</button>
+    <label>Monto</label>
+    <input type="number" id="monto" placeholder="Ej: 500">
 
-      <div id="invoice" class="invoice hidden">
-        <h4>Factura Generada</h4>
-        <div class="qr"><canvas id="qr"></canvas></div>
-        <p id="pr"></p>
-      </div>
+    <label>Moneda</label>
+    <select id="moneda">
+      <option value="CUP">CUP</option>
+      <option value="USD">USD</option>
+    </select>
 
-      <div class="history">
-        <h3>Historial</h3>
-        <ul id="historyList"></ul>
-      </div>
-    </div>
+    <label>Tasa BTC usada</label>
+    <div id="tasa">Cargando...</div>
+
+    <button onclick="crearFactura()">Generar Factura Lightning</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
+  <div id="invoiceBox" style="display:none;">
+    <h3>⚡ Factura Lightning generada</h3>
+    <p><b>Monto:</b> <span id="resMonto"></span> sats</p>
+    <p><b>Descripción:</b> <span id="resDesc"></span></p>
+    <label>Invoice Lightning:</label>
+    <pre id="resInvoice"></pre>
+  </div>
+
   <script>
-    let ownerPin = null;
-    let ownerLn = null;
+    const YADIO_API = "https://api.yadio.io/exrates/BTC";
+    const LNBITS_URL = "https://lnbits.cubabitcoin.org"; // tu servidor LNbits
+    let LN_API_KEY = null; // la pedirá el dueño con PIN
 
-    function saveOwnerConfig() {
-      const ln = document.getElementById('lnAddress').value.trim();
-      const pin = document.getElementById('setPin').value.trim();
-      if (!ln || !pin) {
-        alert("Debes ingresar LN Address y PIN");
-        return;
+    // Pedir PIN y API key al inicio
+    window.onload = () => {
+      const pin = prompt("Dueño: ingrese su PIN para configurar API Key de LNbits:");
+      if(pin){
+        LN_API_KEY = prompt("Introduzca su API Key de LNbits (cartera custodial):");
       }
-      ownerLn = ln;
-      ownerPin = pin;
-      localStorage.setItem("lnAddress", ln);
-      localStorage.setItem("ownerPin", pin);
-      document.getElementById('ownerConfig').classList.add('hidden');
-      document.getElementById('posArea').classList.remove('hidden');
+      actualizarTasa();
     }
 
-    async function getRate(currency) {
-      const res = await fetch(`https://api.yadio.io/exrates/${currency}/BTC`);
-      const data = await res.json();
-      return data.BTC;
-    }
-
-    async function createInvoice() {
-      const desc = document.getElementById('description').value;
-      const amount = parseFloat(document.getElementById('amount').value);
-      const currency = document.getElementById('currency').value;
-      if (!amount) return alert("Monto inválido");
-
-      const rate = await getRate(currency);
-      const sats = Math.round((amount / rate) * 1e8);
-      document.getElementById("rateInfo").innerText = `Tasa usada: 1 BTC = ${(1/rate).toFixed(2)} ${currency}`;
-
-      // Crear invoice desde LNbits usando LNURLp
-      const lnurl = `https://${ownerLn}/?amount=${sats}&comment=${encodeURIComponent(desc)}`;
-      // NOTA: Esto depende del endpoint de LNbits (ej: LN Address expande a un LNURLp válido)
-      // Para demo, simulamos llamada:
-      const paymentRequest = "lnbc1..." + Math.random().toString(36).slice(2,10);
-
-      // Mostrar QR
-      new QRious({
-        element: document.getElementById('qr'),
-        value: paymentRequest,
-        size: 200
-      });
-      document.getElementById("pr").innerText = paymentRequest;
-      document.getElementById("invoice").classList.remove("hidden");
-
-      // Guardar en historial
-      const tx = {
-        desc, amount, currency, rate, sats,
-        time: new Date().toLocaleString(),
-        pr: paymentRequest
-      };
-      let history = JSON.parse(localStorage.getItem("history")||"[]");
-      history.unshift(tx);
-      localStorage.setItem("history", JSON.stringify(history));
-      renderHistory();
-    }
-
-    function renderHistory() {
-      const history = JSON.parse(localStorage.getItem("history")||"[]");
-      const list = document.getElementById("historyList");
-      list.innerHTML = "";
-      history.forEach(h=>{
-        const li = document.createElement("li");
-        li.textContent = `${h.time} – ${h.amount} ${h.currency} (${h.sats} sats) – ${h.desc}`;
-        list.appendChild(li);
-      });
-    }
-
-    // Al cargar, revisar si ya está configurado
-    window.onload = ()=>{
-      const ln = localStorage.getItem("lnAddress");
-      const pin = localStorage.getItem("ownerPin");
-      if (ln && pin) {
-        ownerLn = ln;
-        ownerPin = pin;
-        document.getElementById('ownerConfig').classList.add('hidden');
-        document.getElementById('posArea').classList.remove('hidden');
-        renderHistory();
+    async function actualizarTasa(){
+      try{
+        let res = await fetch(YADIO_API);
+        let data = await res.json();
+        window.tasaCUP = 1 / data.CUP; // sats por CUP
+        window.tasaUSD = 1 / data.USD; // sats por USD
+        document.getElementById("tasa").innerText = `1 BTC = ${data.CUP} CUP / ${data.USD} USD`;
+      }catch(e){
+        document.getElementById("tasa").innerText = "Error al obtener tasa";
       }
-    };
+    }
+
+    async function crearFactura(){
+      const descripcion = document.getElementById("descripcion").value;
+      const monto = parseFloat(document.getElementById("monto").value);
+      const moneda = document.getElementById("moneda").value;
+
+      if(!descripcion || !monto){ alert("Ingrese todos los datos"); return; }
+
+      let sats = 0;
+      if(moneda === "CUP") sats = Math.round(monto * window.tasaCUP * 100_000_000);
+      if(moneda === "USD") sats = Math.round(monto * window.tasaUSD * 100_000_000);
+
+      // Llamada real a LNbits
+      try{
+        const res = await fetch(LNBITS_URL + "/api/v1/payments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Api-Key": LN_API_KEY
+          },
+          body: JSON.stringify({
+            out: false,
+            amount: sats,
+            memo: descripcion
+          })
+        });
+        const data = await res.json();
+
+        document.getElementById("invoiceBox").style.display = "block";
+        document.getElementById("resMonto").innerText = sats;
+        document.getElementById("resDesc").innerText = descripcion;
+        document.getElementById("resInvoice").innerText = data.payment_request;
+      }catch(err){
+        alert("Error al crear factura en LNbits: " + err);
+      }
+    }
   </script>
 </body>
 </html>
